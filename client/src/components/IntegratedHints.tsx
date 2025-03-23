@@ -134,36 +134,43 @@ const IntegratedHints: React.FC<IntegratedHintsProps> = ({
   
   return (
     <div className="integrated-hints-container">
-      <div className="undefine-boxes">
-        {letters.map((letter, index) => (
-          <div key={index} className={getBoxClass(index)}>
-            <span className="letter">{letter}</span>
-          </div>
+      {/* Add visual connection lines from UNDEFINE boxes to hints */}
+      <div className="undefine-connection">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map(position => (
+          <div 
+            key={position} 
+            className={`connection-line ${position <= hintsToReveal ? 'active' : ''}`}
+          />
         ))}
       </div>
       
       <div className="hints-display">
-        {[0, 1, 2, 3, 4, 5, 6, 7].map(position => (
-          <div 
-            key={position} 
-            className={`hint-content ${position < hintsToReveal || isGameOver ? 'visible' : 'hidden'}`}
-          >
-            {position > 0 && position < hintsToReveal + 1 && (
-              <div className="hint-box">
-                <div className="hint-label">
-                  {position === 1 && 'Number of Letters'}
-                  {position === 2 && 'Alternate Definition'}
-                  {position === 3 && 'Synonyms'}
-                  {position === 4 && 'Used in a Sentence'}
-                  {position === 5 && 'Etymology'}
-                  {position === 6 && 'Nearby Words'}
-                  {position === 7 && 'First Letter'}
+        {[0, 1, 2, 3, 4, 5, 6, 7].map(position => {
+          // Only process and show hints that have been revealed or if game is over
+          const isVisible = position > 0 && (position <= hintsToReveal || isGameOver);
+          
+          return (
+            <div 
+              key={position} 
+              className={`hint-content ${isVisible ? 'visible' : 'hidden'}`}
+            >
+              {isVisible && (
+                <div className="hint-box">
+                  <div className="hint-label">
+                    {position === 1 && 'Number of Letters'}
+                    {position === 2 && 'Alternate Definition'}
+                    {position === 3 && 'Synonyms'}
+                    {position === 4 && 'Used in a Sentence'}
+                    {position === 5 && 'Etymology'}
+                    {position === 6 && 'Nearby Words'}
+                    {position === 7 && 'First Letter'}
+                  </div>
+                  <div className="hint-value">{getHintContent(position)}</div>
                 </div>
-                <div className="hint-value">{getHintContent(position)}</div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

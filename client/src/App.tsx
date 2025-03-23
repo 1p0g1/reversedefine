@@ -75,10 +75,10 @@ function App() {
   const [message, setMessage] = useState<string>('');
   const [isCorrect, setIsCorrect] = useState<boolean>(false);
   const [guessHistory, setGuessHistory] = useState<GuessHistory[]>([]);
-  const [remainingGuesses, setRemainingGuesses] = useState<number>(6);
+  const [remainingGuesses, setRemainingGuesses] = useState<number>(8);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [timer, setTimer] = useState<number>(0);
-  const [guessResults, setGuessResults] = useState<GuessResult[]>([null, null, null, null, null, null]);
+  const [guessResults, setGuessResults] = useState<GuessResult[]>([null, null, null, null, null, null, null, null]);
   const [fuzzyMatchPositions, setFuzzyMatchPositions] = useState<number[]>([]);
   const [hintsToReveal, setHintsToReveal] = useState<number>(0);
   const [wordData, setWordData] = useState<WordData | null>(null);
@@ -216,10 +216,10 @@ function App() {
         setMessage('');
         setGuess('');
         setGuessHistory([]);
-        setRemainingGuesses(6);
+        setRemainingGuesses(8);
         setIsGameOver(false);
         setTimer(0);
-        setGuessResults([null, null, null, null, null, null]);
+        setGuessResults([null, null, null, null, null, null, null, null]);
         setFuzzyMatchPositions([]);
         
         setHintsToReveal(0);
@@ -281,7 +281,7 @@ function App() {
       console.log('Game ID being sent:', gameId);
       
       const newRemainingGuesses = remainingGuesses - 1;
-      const currentGuessIndex = 5 - remainingGuesses;
+      const currentGuessIndex = 7 - remainingGuesses;
       
       // Create a new guessResults array - DO NOT directly update before API response
       const newGuessResults = [...guessResults];
@@ -347,7 +347,7 @@ function App() {
       
       if (data.isCorrect) {
         // Mark all DEFINE boxes as correct when the guess is correct
-        for (let i = 0; i <= 5; i++) {
+        for (let i = 0; i <= 7; i++) {
           newGuessResults[i] = 'correct';
         }
         
@@ -404,7 +404,7 @@ function App() {
 
   // Modify the DefineBoxes component to visually match our new design
   const DefineBoxes = () => {
-    const defineLetters = ['D', 'E', 'F', 'I', 'N', 'E'];
+    const defineLetters = ['U', 'N', 'D', 'E', 'F', 'I', 'N', 'E'];
     
     // Simple grid style for the title
     const horizontalStyle = {
@@ -418,16 +418,33 @@ function App() {
     
     return (
       <div style={horizontalStyle}>
-        <div className="un-prefix">Un</div>
-        <div className="central-dot">·</div>
-        {defineLetters.map((letter, index) => (
-          <div 
-            key={index} 
-            className="define-box"
-          >
-            {letter}
-          </div>
-        ))}
+        {defineLetters.map((letter, index) => {
+          // Start with base class
+          let boxClass = 'define-box';
+          
+          // Check for guess result to determine color
+          if (index < guessResults.length && guessResults[index] !== null) {
+            // If this position has a guess result, use that class (correct/incorrect)
+            boxClass += ` ${guessResults[index]}`;
+          } else if (index === 0 || index <= hintsToReveal) {
+            // If no result yet but this box should be active (first box or revealed hint)
+            boxClass += ' active';
+          }
+          
+          // Check if this position has a fuzzy match
+          if (fuzzyMatchPositions.includes(index)) {
+            boxClass += ' fuzzy';
+          }
+          
+          return (
+            <div 
+              key={index} 
+              className={boxClass}
+            >
+              {letter}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -446,7 +463,7 @@ function App() {
   const handleNextWord = () => {
     setGuess('');
     setGuessHistory([]);
-    setGuessResults([null, null, null, null, null, null]);
+    setGuessResults([null, null, null, null, null, null, null, null]);
     setFuzzyMatchPositions([]);
     
     // Reset hints to reveal counter
@@ -532,8 +549,8 @@ function App() {
       </div>
       <div className="game-container">
         <form onSubmit={handleGuess} className="guess-form">
-          {/* Add LetterGuessDisplay component above the input field */}
-          {wordData && (
+          {/* Only show LetterGuessDisplay after the first N hint is revealed */}
+          {wordData && hintsToReveal >= 1 && (
             <LetterGuessDisplay
               wordLength={wordData.letterCount || wordData.word?.length || 0}
               currentGuess={guess}
@@ -574,7 +591,7 @@ function App() {
               <span>Guesses remaining: <strong>{remainingGuesses}</strong></span>
             )}
             {isGameOver && !isCorrect && (
-              <span className="game-over-message">Game Over! The word was: <strong>{correctWord}</strong></span>
+              <span className="game-over-message">Game Over!</span>
             )}
             {isGameOver && isCorrect && (
               <span className="success-message">Correct! Well done!</span>
@@ -608,7 +625,7 @@ function App() {
         <Leaderboard
           userId={userId}
           time={timer}
-          guessCount={6 - remainingGuesses}
+          guessCount={8 - remainingGuesses}
           fuzzyCount={fuzzyCount}
           hintCount={hintCount}
           word={correctWord}

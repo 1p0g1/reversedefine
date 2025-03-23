@@ -593,76 +593,61 @@ button:disabled {
   font-style: italic;
 }
 
+/* Enhanced Define Box styles */
 .define-box {
-  width: 4.5rem;
-  height: 4.5rem;
   display: flex;
-  align-items: center;
   justify-content: center;
-  font-size: 2.8rem;
-  font-weight: bold;
-  background-color: #f8f9fa;
-  border: 2px solid var(--primary-blue);
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  color: var(--primary-blue);
-  box-shadow: 0 2px 4px var(--shadow-color);
-  font-family: 'Goudy Old Style', 'Crimson Text', serif;
-  position: relative;
+  align-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   margin: 0 0.2rem;
+  font-family: 'Goudy Old Style', 'Times New Roman', serif;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #888;
+  position: relative;
+  transition: all 0.3s ease;
+  cursor: default;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* Remove the dots at the bottom of the boxes */
-.define-box::after {
-  display: none;
+/* Active state - blue glow for active, not yet guessed */
+.define-box.active {
+  background-color: #fff;
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+  box-shadow: 0 0 0 1px var(--primary-blue);
 }
 
+/* Correct state - green for correct guesses */
 .define-box.correct {
-  background-color: var(--correct-green);
-  border-color: var(--correct-border);
+  background-color: #4caf50;
+  border-color: #2e7d32;
   color: white;
-  z-index: 2;
-}
-
-/* Remove the dots for correct boxes */
-.define-box.correct::after {
-  display: none;
-}
-
-.define-box.incorrect {
-  background-color: #ffebee;
-  border-color: #c62828;
-  color: #c62828;
-  animation-name: shake;
-  animation-duration: 0.5s;
-  animation-iteration-count: 1;
-  animation-fill-mode: forwards;
-  animation-play-state: running;
-  animation-timing-function: ease-in-out;
-}
-
-/* Style for fuzzy matches - orange color scheme */
-.define-box.fuzzy {
-  background-color: var(--fuzzy-orange);
-  animation: pulseOrange 1s ease-in-out;
-  border-color: var(--fuzzy-border);
-  /* Ensure fuzzy highlighting doesn't override correct box styling */
-  z-index: 1;
-}
-
-/* Prevent animation for boxes that have already been animated */
-.define-box.incorrect.animated {
   animation: none;
-  background-color: #ffebee;
-  border-color: #c62828;
-  color: #c62828;
+  box-shadow: 0 0 0 1px #2e7d32;
 }
 
-/* Keep the orange color for fuzzy matches even after animation */
-.define-box.incorrect.animated.fuzzy {
-  background-color: #fff3e0;
-  border-color: #ff9800;
-  color: #ff9800;
+/* Incorrect state - red for incorrect guesses */
+.define-box.incorrect {
+  background-color: #f44336;
+  border-color: #c62828;
+  color: white;
+  animation: none;
+  box-shadow: 0 0 0 1px #c62828;
+}
+
+/* Fuzzy match state - orange for fuzzy matches */
+.define-box.fuzzy {
+  background-color: #ff9800;
+  border-color: #ef6c00;
+  color: white;
+  animation: none;
+  box-shadow: 0 0 0 1px #ef6c00;
 }
 
 @keyframes pulseOrange {
@@ -1549,5 +1534,37 @@ button:disabled {
     margin: 0.4rem 0;
     padding: 0.3rem;
   }
+}
+
+/* Add styles for debug panel */
+.debug-panel {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #4eff4e;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  z-index: 1000;
+  max-width: 400px;
+  max-height: 400px;
+  overflow: auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  font-size: 12px;
+}
+
+.debug-panel h3 {
+  margin-top: 0;
+  color: #ff9d00;
+  border-bottom: 1px solid #666;
+  padding-bottom: 5px;
+}
+
+.debug-panel pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
