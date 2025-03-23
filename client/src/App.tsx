@@ -4,6 +4,7 @@ import Confetti from 'react-confetti'
 import Leaderboard from './Leaderboard'
 import { getApiUrl } from './config';
 import LetterGuessDisplay from './components/LetterGuessDisplay';
+import IntegratedHints from './components/IntegratedHints';
 
 // Add TypeScript declarations for our window extensions
 declare global {
@@ -28,6 +29,7 @@ interface GuessResponse {
   isFuzzy: boolean;
   fuzzyPositions?: number[];
   leaderboardRank?: number;
+  hintsToReveal: number;
 }
 
 interface WordData {
@@ -37,11 +39,21 @@ interface WordData {
   partOfSpeech: string;
   alternateDefinition?: string;
   synonyms?: string;
-  letterCount?: {
-    count: number;
-    display: string;
+  letterCount?: number;
+  inSentence?: string;
+  etymology?: string;
+  firstLetter?: string;
+  nearbyWords?: string;
+  hints?: {
+    u: null;
+    n: { type: string; value: string | number };
+    d: { type: string; value: string | number };
+    e: { type: string; value: string | number };
+    f: { type: string; value: string | number };
+    i: { type: string; value: string | number };
+    n2: { type: string; value: string | number };
+    e2: { type: string; value: string | number };
   };
-  totalGuesses?: number;
 }
 
 // Add this type at the top with other type definitions
@@ -68,11 +80,7 @@ function App() {
   const [timer, setTimer] = useState<number>(0);
   const [guessResults, setGuessResults] = useState<GuessResult[]>([null, null, null, null, null, null]);
   const [fuzzyMatchPositions, setFuzzyMatchPositions] = useState<number[]>([]);
-  const [hints, setHints] = useState<Hint>({
-    letterCount: false,
-    alternateDefinition: false,
-    synonyms: false
-  });
+  const [hintsToReveal, setHintsToReveal] = useState<number>(0);
   const [wordData, setWordData] = useState<WordData | null>(null);
   const [correctWord, setCorrectWord] = useState<string>('');
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
@@ -85,6 +93,7 @@ function App() {
   const [gameId, setGameId] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [debug, setDebug] = useState<boolean>(false);
 
   useEffect(() => {
     let interval: number | undefined;
@@ -213,12 +222,7 @@ function App() {
         setGuessResults([null, null, null, null, null, null]);
         setFuzzyMatchPositions([]);
         
-        setHints({
-          letterCount: false,
-          alternateDefinition: false,
-          synonyms: false
-        });
-        setHintCount(0);
+        setHintsToReveal(0);
       } catch (error) {
         console.error('Error fetching word:', error);
         
@@ -256,25 +260,6 @@ function App() {
     };
     
     return attemptFetch();
-  };
-
-  const revealHint = (hintType: HintType) => {
-    if (isGameOver) return;
-    
-    // Set the corresponding hint type to true
-    if (!hints[getHintKey(hintType)]) {
-      setHints({
-        ...hints,
-        [getHintKey(hintType)]: true
-      });
-      setHintCount(prev => prev + 1);
-    }
-  };
-  
-  // Helper function to map hint types to Hint object keys
-  const getHintKey = (hintType: HintType): keyof Hint => {
-    if (hintType === 'partOfSpeech') return 'letterCount';
-    return hintType;
   };
 
   const handleGuess = async (e: React.FormEvent) => {
@@ -319,7 +304,7 @@ function App() {
         userId,
         fuzzyCount: fuzzyMatchPositions.length,
         userName,
-        hintCount
+        hintCount: hintsToReveal
       };
       
       console.log('Sending payload to /api/guess:', payload);
@@ -350,6 +335,11 @@ function App() {
       
       // Update state based on the response
       setRemainingGuesses(newRemainingGuesses);
+      
+      // Update hints to reveal counter based on response
+      if (data.hintsToReveal !== undefined) {
+        setHintsToReveal(data.hintsToReveal);
+      }
       
       if (data.isFuzzy && data.fuzzyPositions && data.fuzzyPositions.length) {
         setFuzzyMatchPositions(data.fuzzyPositions);
@@ -412,22 +402,11 @@ function App() {
     }
   };
 
-  // Modify the DefineBoxes component to only apply fuzzy styling to guessed positions
+  // Modify the DefineBoxes component to visually match our new design
   const DefineBoxes = () => {
     const defineLetters = ['D', 'E', 'F', 'I', 'N', 'E'];
-    const [animatedBoxes, setAnimatedBoxes] = useState<boolean[]>([false, false, false, false, false, false]);
     
-    useEffect(() => {
-      // When guessResults changes, mark the corresponding box as animated
-      const newAnimatedBoxes = [...animatedBoxes];
-      guessResults.forEach((result, index) => {
-        if (result === 'incorrect' && !newAnimatedBoxes[index]) {
-          newAnimatedBoxes[index] = true;
-        }
-      });
-      setAnimatedBoxes(newAnimatedBoxes);
-    }, [guessResults]);
-    
+    // Simple grid style for the title
     const horizontalStyle = {
       display: 'flex',
       flexDirection: 'row' as const,
@@ -441,55 +420,14 @@ function App() {
       <div style={horizontalStyle}>
         <div className="un-prefix">Un</div>
         <div className="central-dot">·</div>
-        {defineLetters.map((letter, index) => {
-          // Get the current guess index (0-5) - any position beyond this hasn't been guessed yet
-          const currentGuessIndex = 6 - remainingGuesses;
-          
-          // For correct guesses, show all boxes as correct
-          if (isCorrect) {
-            return (
-              <div 
-                key={index} 
-                className="define-box correct"
-              >
-                {letter}
-              </div>
-            );
-          }
-          
-          // Only apply fuzzy match styling if:
-          // 1. The box position isn't already marked as correct
-          // 2. This position is in the fuzzy match positions array
-          // 3. There are actual fuzzy positions to highlight
-          // 4. We've actually made a guess for this position (index is current guess position)
-          const isFuzzyMatch = guessResults[index] !== 'correct' && 
-                               fuzzyMatchPositions.includes(index) && 
-                               fuzzyMatchPositions.length > 0 &&
-                               index <= currentGuessIndex;
-          
-          console.log(`Box ${index}: guessResult=${guessResults[index]}, currentGuessIndex=${currentGuessIndex}, isFuzzy=${isFuzzyMatch}`);
-          
-          // Build the class string based on conditions
-          let boxClass = `define-box`;
-          if (guessResults[index]) {
-            boxClass += ` ${guessResults[index]}`;
-          }
-          if (animatedBoxes[index]) {
-            boxClass += ` animated`;
-          }
-          if (isFuzzyMatch) {
-            boxClass += ` fuzzy`;
-          }
-          
-          return (
-            <div 
-              key={index} 
-              className={boxClass}
-            >
-              {letter}
-            </div>
-          );
-        })}
+        {defineLetters.map((letter, index) => (
+          <div 
+            key={index} 
+            className="define-box"
+          >
+            {letter}
+          </div>
+        ))}
       </div>
     );
   };
@@ -511,16 +449,29 @@ function App() {
     setGuessResults([null, null, null, null, null, null]);
     setFuzzyMatchPositions([]);
     
-    setHints({
-      letterCount: false,
-      alternateDefinition: false,
-      synonyms: false
-    });
+    // Reset hints to reveal counter
+    setHintsToReveal(0);
     
-    setHintCount(0);
     fetchNewWord();
     setIsGameOver(false);
   };
+
+  // At the bottom of the component, before the return statement
+  // Add a keyboard listener for debug mode toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle debug mode with Ctrl+Shift+D
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setDebug(prev => !prev);
+        console.log('Debug mode toggled:', !debug);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [debug]);
 
   return (
     <div className="app-container">
@@ -582,10 +533,11 @@ function App() {
       <div className="game-container">
         <form onSubmit={handleGuess} className="guess-form">
           {/* Add LetterGuessDisplay component above the input field */}
-          {wordData && wordData.word && (
+          {wordData && (
             <LetterGuessDisplay
-              wordLength={wordData.word.length}
+              wordLength={wordData.letterCount || wordData.word?.length || 0}
               currentGuess={guess}
+              word={wordData.word} 
             />
           )}
           
@@ -634,71 +586,15 @@ function App() {
           </button>
         </form>
 
-        <div className="hints-container">
-          <button 
-            className="hint-button"
-            onClick={() => revealHint('partOfSpeech')}
-            disabled={isGameOver || hints.letterCount}
-            data-hint-type="partOfSpeech"
-          >
-            <div className="hint-icon">🔢</div>
-            <div className="hint-label"># of letters</div>
-          </button>
-          
-          <button
-            className="hint-button"
-            onClick={() => revealHint('alternateDefinition')}
-            disabled={isGameOver || hints.alternateDefinition || !wordData?.alternateDefinition}
-            data-hint-type="alternateDefinition"
-          >
-            <div className="hint-icon">📖</div>
-            <div className="hint-label">Alternate Definition</div>
-          </button>
-          
-          <button
-            className="hint-button"
-            onClick={() => revealHint('synonyms')}
-            disabled={isGameOver || hints.synonyms || !wordData?.synonyms}
-            data-hint-type="synonyms"
-          >
-            <div className="hint-icon">🔄</div>
-            <div className="hint-label">Synonyms</div>
-          </button>
-        </div>
-        
-        {/* Hints Display Area */}
-        <div className={`hints-content-wrapper ${Object.values(hints).some(v => v) ? 'has-active-hint' : ''}`}>
-          {hints.letterCount && wordData && (
-            <div className="hint-display">
-              <div className="hint-title">Letters</div>
-              <div className="hint-content">
-                This word has {wordData.word?.length || 0} letters.
-              </div>
-            </div>
-          )}
-
-          {hints.alternateDefinition && wordData?.alternateDefinition && (
-            <div className="hint-display">
-              <div className="hint-title">Alternate Definition</div>
-              <div className="hint-content">
-                {wordData.alternateDefinition}
-              </div>
-            </div>
-          )}
-
-          {hints.synonyms && wordData?.synonyms && (
-            <div className="hint-display">
-              <div className="hint-title">Synonyms</div>
-              <div className="hint-content synonyms-content">
-                {wordData.synonyms?.split(',').map((syn: string, i: number) => (
-                  <span key={i} className="synonym-tag">
-                    {syn.trim()}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Replace the old hints container with the new IntegratedHints component */}
+        {wordData && wordData.hints && (
+          <IntegratedHints
+            guessResults={guessResults}
+            hintsToReveal={hintsToReveal}
+            hintsData={wordData.hints}
+            isGameOver={isGameOver}
+          />
+        )}
 
         {isGameOver && (
           <button onClick={handleNextWord} className="next-word-btn">
@@ -718,10 +614,36 @@ function App() {
           word={correctWord}
           guessResults={guessResults as any}
           fuzzyMatchPositions={fuzzyMatchPositions}
-          hints={hints}
+          hints={{} as Hint}
           onClose={() => setShowLeaderboard(false)}
           userEmail={userName}
         />
+      )}
+
+      {/* Add debug mode info display */}
+      {debug && (
+        <div className="debug-panel">
+          <h3>Debug Info</h3>
+          <pre>
+            {JSON.stringify({
+              wordData: {
+                word: wordData?.word,
+                wordLength: wordData?.word?.length,
+                definition: wordData?.definition?.substring(0, 30) + '...',
+              },
+              gameState: {
+                isGameOver,
+                isCorrect,
+                remainingGuesses,
+                currentGuess: guess,
+              },
+              apiInfo: {
+                gameId,
+                apiUrl: window.API_BASE_URL || 'http://localhost:3001'
+              }
+            }, null, 2)}
+          </pre>
+        </div>
       )}
 
       <footer className="app-footer">
