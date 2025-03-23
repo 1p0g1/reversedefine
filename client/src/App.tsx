@@ -3,6 +3,7 @@ import './App.css'
 import Confetti from 'react-confetti'
 import Leaderboard from './Leaderboard'
 import { getApiUrl } from './config';
+import LetterGuessDisplay from './components/LetterGuessDisplay';
 
 // Add TypeScript declarations for our window extensions
 declare global {
@@ -580,6 +581,14 @@ function App() {
       </div>
       <div className="game-container">
         <form onSubmit={handleGuess} className="guess-form">
+          {/* Add LetterGuessDisplay component above the input field */}
+          {wordData && wordData.word && (
+            <LetterGuessDisplay
+              wordLength={wordData.word.length}
+              currentGuess={guess}
+            />
+          )}
+          
           <input
             type="text"
             value={guess}
