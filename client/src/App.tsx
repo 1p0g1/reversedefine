@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import Confetti from 'react-confetti'
 import Leaderboard from './Leaderboard'
@@ -70,76 +70,77 @@ interface Hint {
 // Define a type for hint types
 type HintType = 'partOfSpeech' | 'alternateDefinition' | 'synonyms';
 
-// Add a new component for responsive word input
-const ResponsiveWordInput = ({ 
-  isFirstHintRevealed,
-  wordLength, 
-  value, 
-  onChange, 
-  onSubmit, 
-  disabled 
-}: {
-  isFirstHintRevealed: boolean,
-  wordLength: number,
-  value: string,
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
-  onSubmit: (e: React.FormEvent) => void,
-  disabled: boolean
-}) => {
-  // Create a reference to the input element
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  // Generate underscores or letters based on current input
+// Word input component with placeholder for characters
+const ResponsiveWordInput: React.FC<{
+  word: string;
+  currentGuess: string;
+  onGuessChange: (guess: string) => void;
+  onSubmitGuess: (e: React.FormEvent) => void;
+  isFirstHintRevealed: boolean;
+}> = ({ word, currentGuess, onGuessChange, onSubmitGuess, isFirstHintRevealed }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Filter out non-alphabetic characters
+    const value = e.target.value.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    // Limit input to the length of the word
+    const limitedValue = value.slice(0, word.length);
+    onGuessChange(limitedValue);
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentGuess.length > 0) {
+      onSubmitGuess(e);
+    }
+  };
+  
+  const handlePlaceholderClick = () => {
+    inputRef.current?.focus();
+  };
+  
+  // Generate the display for the placeholder
   const generateDisplay = () => {
-    if (!isFirstHintRevealed) return null;
+    if (!word) return null;
     
-    const displayChars = Array(wordLength).fill('_');
-    const inputChars = value.split('');
-    
-    // Replace underscores with typed characters
-    inputChars.forEach((char, index) => {
-      if (index < wordLength) {
-        displayChars[index] = char;
-      }
-    });
-    
-    return (
-      <div className="word-placeholder" onClick={() => inputRef.current?.focus()}>
-        {displayChars.map((char, index) => (
-          <span key={index} className={char !== '_' ? 'filled-char' : 'empty-char'}>
-            {char}
+    const chars = [];
+    for (let i = 0; i < word.length; i++) {
+      if (i < currentGuess.length) {
+        chars.push(
+          <span key={i} className="filled-char">
+            {currentGuess[i]}
           </span>
-        ))}
-      </div>
-    );
+        );
+      } else {
+        chars.push(<span key={i} className="empty-char">_</span>);
+      }
+    }
+    return chars;
   };
 
   return (
-    <div className="responsive-input-container">
-      {generateDisplay()}
-      <form onSubmit={(e) => {
-        if (value.trim() && !disabled) {
-          onSubmit(e);
-        } else {
-          e.preventDefault();
-        }
-      }} className="responsive-input-form">
+    <div className={`responsive-input-container ${isFirstHintRevealed ? 'with-placeholder' : 'minimal'}`}>
+      {isFirstHintRevealed && (
+        <div className="word-placeholder" onClick={handlePlaceholderClick}>
+          {generateDisplay()}
+        </div>
+      )}
+      <form className="responsive-input-form" onSubmit={handleSubmit}>
         <div className="responsive-input-wrapper">
           <input
             ref={inputRef}
             type="text"
-            value={value}
-            onChange={onChange}
-            placeholder={isFirstHintRevealed ? `${wordLength} letters...` : "Wait for the first hint..."}
-            className="responsive-game-input"
-            disabled={disabled}
+            className={`responsive-game-input ${!isFirstHintRevealed ? 'clean-input' : ''}`}
+            value={currentGuess}
+            onChange={handleChange}
+            placeholder={!isFirstHintRevealed ? "Type your guess here..." : ""}
+            autoComplete="off"
             autoFocus
-            maxLength={wordLength > 0 ? wordLength : 30}
           />
           <button 
             type="submit" 
             className="submit-button"
-            disabled={!value.trim() || disabled}
+            disabled={currentGuess.length === 0}
           >
             Guess
           </button>
@@ -631,12 +632,11 @@ function App() {
         {!isGameOver && (
           <div className="guess-input-container">
             <ResponsiveWordInput
+              word={wordData?.word || ''}
+              currentGuess={guess}
+              onGuessChange={(guess) => setGuess(guess)}
+              onSubmitGuess={handleGuess}
               isFirstHintRevealed={hintsToReveal >= 1}
-              wordLength={wordData?.letterCount || wordData?.word?.length || 0}
-              value={guess}
-              onChange={(e) => setGuess(e.target.value)}
-              onSubmit={handleGuess}
-              disabled={isGameOver}
             />
           </div>
         )}
