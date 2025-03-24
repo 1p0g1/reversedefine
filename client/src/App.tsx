@@ -546,7 +546,8 @@ function App() {
         {/* Display UNDEFINE boxes at the top */}
         <div className="define-boxes-container">
           <div className="define-boxes">
-            {['U', 'N', 'D', 'E', 'F', 'I', 'N', 'E'].map((letter, index) => {
+            {/* Render UN part */}
+            {['U', 'N'].map((letter, index) => {
               let boxClass = 'define-box';
               
               // Add active class if this box should be highlighted
@@ -560,7 +561,32 @@ function App() {
               }
               
               return (
-                <div key={index} className={boxClass}>
+                <div key={`un-${index}`} className={boxClass}>
+                  {letter}
+                </div>
+              );
+            })}
+            
+            {/* Add centered dot */}
+            <div className="middle-dot">·</div>
+            
+            {/* Render DEFINE part */}
+            {['D', 'E', 'F', 'I', 'N', 'E'].map((letter, index) => {
+              const actualIndex = index + 2; // Adjust index for DEFINE part (after U, N)
+              let boxClass = 'define-box';
+              
+              // Add active class if this box should be highlighted
+              if (guessResults[actualIndex] === 'correct') {
+                boxClass += ' correct';
+              } else if (guessResults[actualIndex] === 'incorrect' || guessResults[actualIndex] === 'fuzzy') {
+                // Treat fuzzy as incorrect for now to simplify UI
+                boxClass += ' incorrect';
+              } else if (actualIndex === 0 || actualIndex <= hintsToReveal) {
+                boxClass += ' active';
+              }
+              
+              return (
+                <div key={`define-${index}`} className={boxClass}>
                   {letter}
                 </div>
               );
