@@ -5,6 +5,11 @@
   max-width: 560px;
   margin: 0 auto;
   align-items: center;
+  background-color: #f9f5f0; /* Paper-like background */
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e6e1d8;
 }
 
 /* Horizontal layout for hints */
@@ -23,6 +28,13 @@
   transition: all 0.3s ease-in-out;
   position: relative;
   width: 100%;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e6e1d8; /* Subtle divider between sections */
+}
+
+.hint-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .hint-row.hidden {
@@ -57,6 +69,7 @@
   transition: all 0.3s ease-in-out;
   position: relative;
   z-index: 2;
+  font-family: 'Merriweather', Georgia, serif;
 }
 
 .hint-letter-indicator.inactive {
@@ -89,10 +102,9 @@
 /* Box containing the hint content */
 .hint-content-box {
   flex: 1;
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: transparent; /* Remove background for a cleaner look */
   border-radius: 0.5rem;
   padding: 0.8rem 1.2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease-in-out;
   position: relative;
   z-index: 2;
@@ -101,25 +113,29 @@
 
 /* Special styling for the definition content box */
 .hint-content-box.definition-content {
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: transparent;
   padding: 1rem 1.2rem;
   border-left: none;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
 .hint-content-box.definition-content .hint-value {
-  font-size: 1.1rem;
-  line-height: 1.5;
-  font-weight: 500;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  font-weight: 300;
+  font-family: 'Merriweather', Georgia, serif;
+  color: #2c3e50;
 }
 
 .hint-content-box.definition-content .hint-label {
   font-size: 0.9rem;
   color: var(--primary-blue);
+  font-family: 'Merriweather', Georgia, serif;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
 }
 
 .hint-row.visible .hint-content-box {
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 /* Remove different colors for different hint types - use consistent coloring */
@@ -130,18 +146,20 @@
   color: #555;
   margin-bottom: 0.4rem;
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05rem;
+  font-variant: small-caps; /* Use small caps for dictionary-like appearance */
+  letter-spacing: 0.08rem;
   text-align: left;
-  font-family: 'Crimson Text', serif;
+  font-family: 'Merriweather', Georgia, serif;
+  text-transform: uppercase; /* Add uppercase for even more dictionary-like style */
 }
 
 .hint-value {
-  line-height: 1.5;
-  font-size: 1rem;
-  color: #333;
+  line-height: 1.6;
+  font-size: 1.05rem;
+  color: #2c3e50;
   text-align: left;
-  font-family: 'Crimson Text', serif;
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 300;
 }
 
 /* Special styling for synonyms */
@@ -152,22 +170,27 @@
 }
 
 .synonym-tag {
-  background-color: rgba(48, 70, 116, 0.1);
-  color: #333;
+  background-color: rgba(48, 70, 116, 0.05);
+  color: #2c3e50;
   padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-family: 'Crimson Text', serif;
+  border-radius: 3px;
+  font-size: 0.95rem;
+  font-family: 'Merriweather', Georgia, serif;
   transition: all 0.2s ease;
+  border: 1px solid rgba(48, 70, 116, 0.1);
 }
 
 .synonym-tag:hover {
-  background-color: rgba(48, 70, 116, 0.2);
+  background-color: rgba(48, 70, 116, 0.1);
   transform: translateY(-1px);
 }
 
 /* Responsive styles */
 @media (max-width: 768px) {
+  .integrated-hints-container {
+    padding: 1.2rem;
+  }
+  
   .hint-letter-indicator {
     min-width: 2.2rem;
     min-height: 2.2rem;
@@ -189,7 +212,7 @@
   }
   
   .hint-content-box.definition-content .hint-value {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
   
   .hint-label {
@@ -198,12 +221,12 @@
   }
   
   .hint-value {
-    font-size: 0.95rem;
+    font-size: 1rem;
   }
   
   .synonym-tag {
     padding: 0.25rem 0.6rem;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
   }
 
   .hint-connector {

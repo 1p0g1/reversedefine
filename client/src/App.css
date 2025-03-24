@@ -51,29 +51,33 @@
   --light-blue: #dbe7ff;
   --text-dark: #2c3e50;
   --text-light: #6c7a89;
-  --background-color: #f9f7f2;
+  --background-color: #f7f4ef; /* Slightly warmer off-white background */
   --card-bg: rgba(255, 255, 255, 0.9);
   --hint-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
   --card-radius: 0.5rem;
   --transition-speed: 0.3s;
   --border-color: #e0e0e0;
   --shadow-color: rgba(0, 0, 0, 0.1);
-  --paper-color: #faf7f2;
+  --paper-color: #f9f5f0; /* Paper-like color */
   --paper-shadow: rgba(0, 0, 0, 0.05);
   --fuzzy-orange: #ff9800;
   --fuzzy-border: #ff9800;
   --correct-green: #e8f5e9;
   --correct-border: #2e7d32;
+  --dictionary-border: #e6e1d8; /* Subtle border for dictionary elements */
+  --dictionary-divider: #e0d9cf; /* Subtle divider for dictionary sections */
+  --dictionary-font: 'Merriweather', Georgia, serif; /* Primary dictionary font */
 }
 
 body {
-  font-family: 'Crimson Text', serif;
+  font-family: var(--dictionary-font);
   background-color: var(--background-color);
   color: var(--text-dark);
   padding: 0;
   margin: 0;
   min-height: 100vh;
   line-height: 1.5;
+  background-image: url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M81.28 88H68.413l19.298 19.298L81.28 88zm2.107 0h13.226L90 107.838 83.387 88zm15.334 0h12.866l-19.298 19.298L98.72 88zm-32.927-2.207L73.586 78h32.827l.5.5 7.294 7.293L115.414 87l-24.707 24.707-.707.707L64.586 87l1.207-1.207zm2.62.207L74 80.414 79.586 86H68.414l5-5.586zm16.706 0L86 80.414 91.586 86H80.414l5-5.586zm16.707 0L97 80.414 102.586 86H91.414l5-5.586zm-8.06 24.193L78.046 117.78l8.207-8.207-11.586.5-3.293 3.293-1.414 1.414Z' fill='%23304674' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 #root {
@@ -108,9 +112,9 @@ body {
 }
 
 .game-title {
-  font-family: 'Crimson Text', serif;
+  font-family: var(--dictionary-font);
   font-size: 2.5rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--text-dark);
   margin: 0;
@@ -168,6 +172,10 @@ body {
   margin: 1.5rem auto;
   padding: 1.5rem 2rem;
   font-size: 1.6rem;
+  background-color: var(--paper-color);
+  border-radius: 8px;
+  border: 1px solid var(--dictionary-border);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
 }
 
 .definition-box::before {
@@ -183,6 +191,9 @@ body {
   font-size: 1.5rem;
   line-height: 1.6;
   margin: 0;
+  font-family: var(--dictionary-font);
+  color: var(--text-dark);
+  font-weight: 300;
 }
 
 .guess-form {
@@ -541,7 +552,7 @@ button:disabled {
   font-size: 1.8rem;
   padding: 0.3rem 1.5rem;
   min-width: 120px;
-  font-family: 'Crimson Text', serif;
+  font-family: var(--dictionary-font);
   color: var(--primary-blue);
   letter-spacing: 0.1em;
   background: transparent;
@@ -612,15 +623,17 @@ button:disabled {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: var(--paper-color);
+  color: var(--text-dark);
   font-size: 1.6rem;
   font-weight: bold;
-  border-radius: 0.4rem;
+  font-family: var(--dictionary-font);
+  border-radius: 4px;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--dictionary-border);
 }
 
 /* Active state - when this letter's hint is revealed */
@@ -1131,15 +1144,17 @@ button:disabled {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: var(--paper-color);
+  color: var(--text-dark);
   font-size: 1.4rem;
   font-weight: bold;
+  font-family: var(--dictionary-font);
   border-radius: 0.3rem;
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--dictionary-border);
 }
 
 /* Active state - when this letter's hint is revealed */
@@ -1226,25 +1241,30 @@ button:disabled {
   border-radius: 6px;
   font-size: 1.1rem;
   line-height: 1.5;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--paper-color);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   text-align: center;
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
+  font-family: var(--dictionary-font);
+  border: 1px solid var(--dictionary-border);
+  font-weight: 300;
 }
 
 .game-over-label {
-  font-weight: bold;
+  font-weight: 700;
   font-style: italic;
+  font-family: var(--dictionary-font);
 }
 
 .correct-word {
   font-style: italic;
   color: var(--primary-blue);
-  font-weight: bold;
+  font-weight: 700;
   font-size: 1.3em;
   animation: highlightWord 1s ease-in-out;
+  font-family: var(--dictionary-font);
 }
 
 .success-message {
@@ -1526,15 +1546,17 @@ button:disabled {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: var(--paper-color);
+  color: var(--text-dark);
   font-size: 1.4rem;
   font-weight: bold;
+  font-family: var(--dictionary-font);
   border-radius: 0.3rem;
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--dictionary-border);
 }
 
 /* Timer container with improved styling */
@@ -1551,7 +1573,7 @@ button:disabled {
   font-size: 1.8rem;
   padding: 0.3rem 1.5rem;
   min-width: 120px;
-  font-family: 'Crimson Text', serif;
+  font-family: var(--dictionary-font);
   color: var(--primary-blue);
   letter-spacing: 0.1em;
   background: transparent;
@@ -1658,13 +1680,14 @@ button:disabled {
   flex: 1;
   padding: 0.8rem 1rem;
   font-size: 1.2rem;
-  background-color: rgba(255, 255, 255, 0.5);
-  border: none;
+  background-color: var(--paper-color);
+  border: 1px solid var(--dictionary-border);
   border-radius: 4px;
   color: var(--text-dark);
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   outline: none;
+  font-family: var(--dictionary-font);
 }
 
 /* Clean input styling - before first hint */
@@ -1753,6 +1776,7 @@ button:disabled {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   font-weight: 500;
   min-width: 110px;
+  font-family: var(--dictionary-font);
 }
 
 .submit-button:hover:not(:disabled) {
