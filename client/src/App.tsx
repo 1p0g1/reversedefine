@@ -78,62 +78,17 @@ const ResponsiveWordInput: React.FC<{
   onSubmitGuess: (e: React.FormEvent) => void;
   isFirstHintRevealed: boolean;
 }> = ({ word, currentGuess, onGuessChange, onSubmitGuess, isFirstHintRevealed }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Filter out non-alphabetic characters
-    const value = e.target.value.replace(/[^a-zA-Z]/g, '').toLowerCase();
-    // Limit input to the length of the word
-    const limitedValue = value.slice(0, word.length);
-    onGuessChange(limitedValue);
-  };
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentGuess.length > 0) {
-      onSubmitGuess(e);
-    }
-  };
-  
-  const handlePlaceholderClick = () => {
-    inputRef.current?.focus();
-  };
-  
-  // Generate the display for the placeholder
-  const generateDisplay = () => {
-    if (!word) return null;
-    
-    const chars = [];
-    for (let i = 0; i < word.length; i++) {
-      if (i < currentGuess.length) {
-        chars.push(
-          <span key={i} className="filled-char">
-            {currentGuess[i]}
-          </span>
-        );
-      } else {
-        chars.push(<span key={i} className="empty-char">_</span>);
-      }
-    }
-    return chars;
-  };
-
+  // Simple direct input implementation
   return (
-    <div className={`responsive-input-container ${isFirstHintRevealed ? 'with-placeholder' : 'minimal'}`}>
-      {isFirstHintRevealed && (
-        <div className="word-placeholder" onClick={handlePlaceholderClick}>
-          {generateDisplay()}
-        </div>
-      )}
-      <form className="responsive-input-form" onSubmit={handleSubmit}>
+    <div className="responsive-input-container">
+      <form onSubmit={onSubmitGuess}>
         <div className="responsive-input-wrapper">
           <input
-            ref={inputRef}
             type="text"
-            className={`responsive-game-input ${!isFirstHintRevealed ? 'clean-input' : ''}`}
+            className="responsive-game-input"
             value={currentGuess}
-            onChange={handleChange}
-            placeholder={!isFirstHintRevealed ? "Type your guess here..." : ""}
+            onChange={(e) => onGuessChange(e.target.value.toLowerCase())}
+            placeholder="Type your guess here..."
             autoComplete="off"
             autoFocus
           />
@@ -668,26 +623,37 @@ function App() {
         />
       )}
 
-      {/* Add debug mode info display */}
+      {/* Add debug mode info display - only show when debug is true */}
       {debug && (
-        <div className="debug-panel">
+        <div className="debug-panel" style={{ position: 'fixed', bottom: '0', right: '0', backgroundColor: 'white', padding: '10px', border: '1px solid #ccc', maxWidth: '500px', maxHeight: '300px', overflow: 'auto', zIndex: 1000 }}>
           <h3>Debug Info</h3>
           <pre>
             {JSON.stringify({
-              wordData: {
-                word: wordData?.word,
+              wordData: wordData ? {
+                wordId: wordData.wordId,
+                word: wordData.word,
                 wordLength: wordData?.word?.length,
-                definition: wordData?.definition?.substring(0, 30) + '...',
-              },
+                definition: wordData.definition?.substring(0, 30) + '...',
+                partOfSpeech: wordData.partOfSpeech,
+                hints: wordData.hints ? Object.keys(wordData.hints) : 'No hints'
+              } : 'No word data loaded',
               gameState: {
                 isGameOver,
                 isCorrect,
                 remainingGuesses,
                 currentGuess: guess,
+                hintsToReveal
               },
               apiInfo: {
                 gameId,
-                apiUrl: window.API_BASE_URL || 'http://localhost:3001'
+                apiUrl: window.API_BASE_URL || 'http://localhost:3001',
+                dbProvider: import.meta.env.VITE_DB_PROVIDER || 'unknown',
+                mockMode: window.location.search.includes('mock=true')
+              },
+              uiState: {
+                showLeaderboard,
+                loading,
+                error: error || 'none'
               }
             }, null, 2)}
           </pre>
