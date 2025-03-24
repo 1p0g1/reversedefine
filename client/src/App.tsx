@@ -130,6 +130,9 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [debug, setDebug] = useState<boolean>(false);
+  const [crackLevels, setCrackLevels] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0]);
+  const shatterTimeouts = useRef<NodeJS.Timeout[]>([]);
+  const [shatterComplete, setShatterComplete] = useState<boolean>(false);
 
   // Define a constant for max guesses
   const MAX_GUESSES = 8;
@@ -313,15 +316,44 @@ function App() {
         setIsCorrect(true);
         setShowConfetti(true);
         
+        // Reset any cracks when the player wins
+        setCrackLevels([0, 0, 0, 0, 0, 0, 0, 0]);
+        
         // Show leaderboard after a short delay
         setTimeout(() => {
           setShowLeaderboard(true);
         }, 2000);
+      } else {
+        // Player lost - trigger full shatter animation
+        // Create a sequence of shatter animations
+        const delays = [0, 100, 200, 300, 400, 500, 600, 700];
+        
+        // Clear any existing timeouts
+        shatterTimeouts.current.forEach(timeout => clearTimeout(timeout));
+        shatterTimeouts.current = [];
+        
+        // Schedule the shatter animations
+        const newTimeouts = delays.map((delay, index) => {
+          return setTimeout(() => {
+            setCrackLevels(prev => {
+              const newLevels = [...prev];
+              newLevels[index] = 5; // Level 5 means "shattered"
+              return newLevels;
+            });
+          }, delay);
+        });
+        
+        shatterTimeouts.current = newTimeouts;
+        
+        // Set shatter complete flag after all animations finish
+        setTimeout(() => {
+          setShatterComplete(true);
+        }, 1700);
       }
     }
   }, [guessResults, hintsToReveal]);
 
-  // Modify the handleGuess function to ensure game ends after MAX_GUESSES
+  // Modify the handleGuess function to increase crack levels on incorrect guesses
   const handleGuess = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -371,10 +403,21 @@ function App() {
         }, 1500);
       } else {
         // For incorrect guesses, mark the current hint position as incorrect
-        // Simplified: treat fuzzy matches as incorrect for now
+        // And increase crack level for all tiles
         const currentPosition = hintsToReveal; 
         newGuessResults[currentPosition] = 'incorrect'; // Always incorrect, ignoring fuzzy
         setGuessResults(newGuessResults);
+        
+        // Update crack levels - increase crack level for incorrect guesses
+        setCrackLevels(prev => {
+          const newLevels = [...prev];
+          // Increase crack level for all boxes by 1, max 4
+          return newLevels.map((level, i) => 
+            // Only increase if not already at max and not already correct
+            newGuessResults[i] !== 'correct' ? Math.min(level + 1, 4) : level
+          );
+        });
+        
         setHintsToReveal(data.hintsToReveal);
         
         // End game if this was the last guess
@@ -390,6 +433,13 @@ function App() {
       console.error('Error submitting guess:', error);
     }
   };
+
+  // Clean up timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      shatterTimeouts.current.forEach(timeout => clearTimeout(timeout));
+    };
+  }, []);
 
   // Modify the DefineBoxes component to visually match our new design
   const DefineBoxes = () => {
@@ -426,6 +476,20 @@ function App() {
             boxClass += ' fuzzy';
           }
           
+          // Add crack level class if there are cracks
+          if (crackLevels[index] > 0) {
+            if (crackLevels[index] < 5) {
+              boxClass += ` crack-level-${crackLevels[index]}`;
+            } else {
+              boxClass += ' shattered';
+            }
+          }
+          
+          // Add win state if game is won
+          if (isCorrect && isGameOver) {
+            boxClass += ' win-state';
+          }
+          
           return (
             <div 
               key={index} 
@@ -435,6 +499,87 @@ function App() {
             </div>
           );
         })}
+      </div>
+    );
+  };
+
+  // Update the display of UNDEFINE boxes at the top with middle dot handling
+  const renderUnDefineBoxes = () => {
+    return (
+      <div className="define-boxes-container">
+        <div className="define-boxes">
+          {/* Render UN part */}
+          {['U', 'N'].map((letter, index) => {
+            let boxClass = 'define-box';
+            
+            // Add active class if this box should be highlighted
+            if (guessResults[index] === 'correct') {
+              boxClass += ' correct';
+            } else if (guessResults[index] === 'incorrect' || guessResults[index] === 'fuzzy') {
+              boxClass += ' incorrect';
+            } else if (index === 0 || index <= hintsToReveal) {
+              boxClass += ' active';
+            }
+            
+            // Add crack level class
+            if (crackLevels[index] > 0) {
+              if (crackLevels[index] < 5) {
+                boxClass += ` crack-level-${crackLevels[index]}`;
+              } else {
+                boxClass += ' shattered';
+              }
+            }
+            
+            // Add win state if game is won
+            if (isCorrect && isGameOver) {
+              boxClass += ' win-state';
+            }
+            
+            return (
+              <div key={`un-${index}`} className={boxClass}>
+                {letter}
+              </div>
+            );
+          })}
+          
+          {/* Add centered dot */}
+          <div className="middle-dot">·</div>
+          
+          {/* Render DEFINE part */}
+          {['D', 'E', 'F', 'I', 'N', 'E'].map((letter, index) => {
+            const actualIndex = index + 2; // Adjust index for DEFINE part (after U, N)
+            let boxClass = 'define-box';
+            
+            // Add active class if this box should be highlighted
+            if (guessResults[actualIndex] === 'correct') {
+              boxClass += ' correct';
+            } else if (guessResults[actualIndex] === 'incorrect' || guessResults[actualIndex] === 'fuzzy') {
+              boxClass += ' incorrect';
+            } else if (actualIndex === 0 || actualIndex <= hintsToReveal) {
+              boxClass += ' active';
+            }
+            
+            // Add crack level class
+            if (crackLevels[actualIndex] > 0) {
+              if (crackLevels[actualIndex] < 5) {
+                boxClass += ` crack-level-${crackLevels[actualIndex]}`;
+              } else {
+                boxClass += ' shattered';
+              }
+            }
+            
+            // Add win state if game is won
+            if (isCorrect && isGameOver) {
+              boxClass += ' win-state';
+            }
+            
+            return (
+              <div key={`define-${index}`} className={boxClass}>
+                {letter}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -544,55 +689,7 @@ function App() {
       
       <div className="game-container simplified-ui">
         {/* Display UNDEFINE boxes at the top */}
-        <div className="define-boxes-container">
-          <div className="define-boxes">
-            {/* Render UN part */}
-            {['U', 'N'].map((letter, index) => {
-              let boxClass = 'define-box';
-              
-              // Add active class if this box should be highlighted
-              if (guessResults[index] === 'correct') {
-                boxClass += ' correct';
-              } else if (guessResults[index] === 'incorrect' || guessResults[index] === 'fuzzy') {
-                // Treat fuzzy as incorrect for now to simplify UI
-                boxClass += ' incorrect';
-              } else if (index === 0 || index <= hintsToReveal) {
-                boxClass += ' active';
-              }
-              
-              return (
-                <div key={`un-${index}`} className={boxClass}>
-                  {letter}
-                </div>
-              );
-            })}
-            
-            {/* Add centered dot */}
-            <div className="middle-dot">·</div>
-            
-            {/* Render DEFINE part */}
-            {['D', 'E', 'F', 'I', 'N', 'E'].map((letter, index) => {
-              const actualIndex = index + 2; // Adjust index for DEFINE part (after U, N)
-              let boxClass = 'define-box';
-              
-              // Add active class if this box should be highlighted
-              if (guessResults[actualIndex] === 'correct') {
-                boxClass += ' correct';
-              } else if (guessResults[actualIndex] === 'incorrect' || guessResults[actualIndex] === 'fuzzy') {
-                // Treat fuzzy as incorrect for now to simplify UI
-                boxClass += ' incorrect';
-              } else if (actualIndex === 0 || actualIndex <= hintsToReveal) {
-                boxClass += ' active';
-              }
-              
-              return (
-                <div key={`define-${index}`} className={boxClass}>
-                  {letter}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {renderUnDefineBoxes()}
       
         <div className="timer-container">
           <div className="timer">{formatTime(timer)}</div>
@@ -668,7 +765,8 @@ function App() {
                 isCorrect,
                 remainingGuesses,
                 currentGuess: guess,
-                hintsToReveal
+                hintsToReveal,
+                crackLevels
               },
               apiInfo: {
                 gameId,
