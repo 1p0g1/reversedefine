@@ -1,173 +1,103 @@
 import React from 'react';
 import './IntegratedHints.css';
 
-interface HintData {
+interface Hint {
   type: string;
   value: string | number;
 }
 
-interface HintMap {
-  u: null;
-  n: HintData;
-  d: HintData;
-  e: HintData;
-  f: HintData;
-  i: HintData;
-  n2: HintData;
-  e2: HintData;
-}
-
 interface IntegratedHintsProps {
-  guessResults: Array<'correct' | 'incorrect' | null>;
-  hintsToReveal: number;
-  hintsData: HintMap | null;
-  isGameOver: boolean;
+  hints: {
+    u: null;
+    n: Hint;
+    d: Hint;
+    e: Hint;
+    f: Hint;
+    i: Hint;
+    n2: Hint;
+    e2: Hint;
+  } | undefined;
+  revealedHints: number;
+  gameOver: boolean;
+  guessResults: (string | null)[];
+  definition: string;
 }
 
-const IntegratedHints: React.FC<IntegratedHintsProps> = ({
+const IntegratedHints: React.FC<IntegratedHintsProps> = ({ 
+  hints, 
+  revealedHints, 
+  gameOver,
   guessResults,
-  hintsToReveal,
-  hintsData,
-  isGameOver
+  definition
 }) => {
-  // Return null if no hint data available
-  if (!hintsData) return null;
+  if (!hints) return null;
 
-  // Letters to display in the hint boxes
-  const letters = ['U', 'N', 'D', 'E', 'F', 'I', 'N', 'E'];
-  
-  // Map hint type to user-friendly label
-  const getHintLabel = (type: string): string => {
-    switch (type) {
-      case 'letterCount': return 'Number of Letters';
-      case 'alternateDefinition': return 'Alternate Definition';
-      case 'synonyms': return 'Synonyms';
-      case 'inSentence': return 'Used in a Sentence';
-      case 'etymology': return 'Etymology';
-      case 'nearbyWords': return 'Nearby Words';
-      case 'firstLetter': return 'First Letter';
-      default: return 'Hint';
-    }
+  // Define which hints correspond to which letters in "UNDEFINE"
+  const hintContent: { [key: string]: { letter: string; type: string; hint: Hint | null; isDefinition?: boolean } } = {
+    '0': { letter: 'U', type: 'DEFINITION', hint: null, isDefinition: true },
+    '1': { letter: 'N', type: 'NUMBER OF LETTERS', hint: hints.n },
+    '2': { letter: 'D', type: 'ALTERNATE DEFINITION', hint: hints.d },
+    '3': { letter: 'E', type: 'SYNONYMS', hint: hints.e },
+    '4': { letter: 'F', type: 'IN A SENTENCE', hint: hints.f },
+    '5': { letter: 'I', type: 'ETYMOLOGY', hint: hints.i },
+    '6': { letter: 'N', type: 'NEARBY WORDS', hint: hints.n2 },
+    '7': { letter: 'E', type: 'FIRST LETTER', hint: hints.e2 },
   };
-  
-  // Get hint content based on position in UNDEFINE sequence
-  const getHintContent = (position: number): React.ReactNode => {
-    // Don't show hints beyond what's been revealed
-    if (position >= hintsToReveal && !isGameOver) {
-      return null;
-    }
-    
-    // Map position to hint data
-    let hintData: HintData | null = null;
-    switch (position) {
-      case 0: // U - No hint
-        return null;
-      case 1: // N - Number of letters
-        hintData = hintsData.n;
-        break;
-      case 2: // D - Alternate Definition
-        hintData = hintsData.d;
-        break;
-      case 3: // E - Synonyms
-        hintData = hintsData.e;
-        break;
-      case 4: // F - In a sentence
-        hintData = hintsData.f;
-        break;
-      case 5: // I - Etymology
-        hintData = hintsData.i;
-        break;
-      case 6: // N - Nearby words
-        hintData = hintsData.n2;
-        break;
-      case 7: // E - First letter
-        hintData = hintsData.e2;
-        break;
-      default:
-        return null;
-    }
-    
-    if (!hintData || !hintData.value) return null;
-    
-    // Format the hint content based on type
-    switch (hintData.type) {
-      case 'letterCount':
-        return <p>This word has <strong>{hintData.value}</strong> letters.</p>;
-      case 'synonyms':
-        return (
-          <div className="synonyms-container">
-            {String(hintData.value).split(',').map((synonym, i) => (
-              <span key={i} className="synonym-tag">{synonym.trim()}</span>
-            ))}
-          </div>
-        );
-      case 'firstLetter':
-        return <p>The first letter is <strong>{hintData.value}</strong></p>;
-      case 'inSentence':
-        return <p>"{String(hintData.value)}"</p>;
-      default:
-        return <p>{hintData.value}</p>;
-    }
+
+  // Determine if hint should be revealed based on the game state
+  const isHintRevealed = (index: number) => {
+    return gameOver || index <= revealedHints;
   };
-  
-  // Get the class for a box based on its position and the guess results
-  const getBoxClass = (position: number): string => {
-    let boxClass = 'undefine-box';
-    
-    // If game is won, make all boxes correct
-    if (guessResults.every(r => r === 'correct')) {
-      return `${boxClass} correct`;
+
+  // Format the hint value based on its type
+  const formatHintValue = (hint: Hint | null, isDefinition = false) => {
+    if (isDefinition) {
+      return <span>{definition}</span>;
     }
     
-    // If we have a result for this position (already guessed)
-    if (position < guessResults.length && guessResults[position] !== null) {
-      boxClass += ` ${guessResults[position]}`;
+    if (!hint) return null;
+
+    if (hint.type === 'synonyms' && typeof hint.value === 'string') {
+      const synonyms = hint.value.split(',').map(s => s.trim());
+      return (
+        <div className="synonyms-container">
+          {synonyms.map((synonym, idx) => (
+            <span key={idx} className="synonym-tag">{synonym}</span>
+          ))}
+        </div>
+      );
     }
-    
-    // If this hint is revealed (for visual indication)
-    if (position < hintsToReveal || isGameOver) {
-      boxClass += ' revealed';
-    }
-    
-    return boxClass;
+
+    return <span>{hint.value}</span>;
   };
-  
+
   return (
     <div className="integrated-hints-container">
-      {/* Add visual connection lines from UNDEFINE boxes to hints */}
-      <div className="undefine-connection">
-        {[0, 1, 2, 3, 4, 5, 6, 7].map(position => (
-          <div 
-            key={position} 
-            className={`connection-line ${position <= hintsToReveal ? 'active' : ''}`}
-          />
-        ))}
-      </div>
-      
-      <div className="hints-display">
-        {[0, 1, 2, 3, 4, 5, 6, 7].map(position => {
-          // Only process and show hints that have been revealed or if game is over
-          const isVisible = position > 0 && (position <= hintsToReveal || isGameOver);
+      <div className="horizontal-hints-layout">
+        {Object.entries(hintContent).map(([key, { letter, type, hint, isDefinition }]) => {
+          const index = parseInt(key);
+          const revealed = isHintRevealed(index);
           
+          // Skip if this hint isn't revealed yet and it's not the U (definition)
+          if (!revealed && index !== 0) {
+            return null;
+          }
+
           return (
             <div 
-              key={position} 
-              className={`hint-content ${isVisible ? 'visible' : 'hidden'}`}
+              key={key} 
+              className={`hint-row ${revealed ? 'visible' : 'hidden'}`}
             >
-              {isVisible && (
-                <div className="hint-box">
-                  <div className="hint-label">
-                    {position === 1 && 'Number of Letters'}
-                    {position === 2 && 'Alternate Definition'}
-                    {position === 3 && 'Synonyms'}
-                    {position === 4 && 'Used in a Sentence'}
-                    {position === 5 && 'Etymology'}
-                    {position === 6 && 'Nearby Words'}
-                    {position === 7 && 'First Letter'}
-                  </div>
-                  <div className="hint-value">{getHintContent(position)}</div>
+              <div className={`hint-letter-indicator ${index === 0 ? 'definition-indicator' : ''} ${revealed ? 'active' : 'inactive'}`}>
+                {letter}
+              </div>
+              <div className="hint-connector"></div>
+              <div className={`hint-content-box ${index === 0 ? 'definition-content' : ''}`}>
+                <div className="hint-label">{type}</div>
+                <div className="hint-value">
+                  {formatHintValue(hint, isDefinition)}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

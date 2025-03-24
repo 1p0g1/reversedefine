@@ -5,6 +5,7 @@ import Leaderboard from './Leaderboard'
 import { getApiUrl } from './config';
 import LetterGuessDisplay from './components/LetterGuessDisplay';
 import IntegratedHints from './components/IntegratedHints';
+import React from 'react';
 
 // Add TypeScript declarations for our window extensions
 declare global {
@@ -57,7 +58,7 @@ interface WordData {
 }
 
 // Add this type at the top with other type definitions
-type GuessResult = 'correct' | 'incorrect' | null;
+type GuessResult = 'correct' | 'incorrect' | 'fuzzy' | null;
 
 // Update or add the Hint interface
 interface Hint {
@@ -68,6 +69,85 @@ interface Hint {
 
 // Define a type for hint types
 type HintType = 'partOfSpeech' | 'alternateDefinition' | 'synonyms';
+
+// Add a new component for responsive word input
+const ResponsiveWordInput = ({ 
+  isFirstHintRevealed,
+  wordLength, 
+  value, 
+  onChange, 
+  onSubmit, 
+  disabled 
+}: {
+  isFirstHintRevealed: boolean,
+  wordLength: number,
+  value: string,
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  onSubmit: (e: React.FormEvent) => void,
+  disabled: boolean
+}) => {
+  // Create a reference to the input element
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Generate underscores or letters based on current input
+  const generateDisplay = () => {
+    if (!isFirstHintRevealed) return null;
+    
+    const displayChars = Array(wordLength).fill('_');
+    const inputChars = value.split('');
+    
+    // Replace underscores with typed characters
+    inputChars.forEach((char, index) => {
+      if (index < wordLength) {
+        displayChars[index] = char;
+      }
+    });
+    
+    return (
+      <div className="word-placeholder" onClick={() => inputRef.current?.focus()}>
+        {displayChars.map((char, index) => (
+          <span key={index} className={char !== '_' ? 'filled-char' : 'empty-char'}>
+            {char}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="responsive-input-container">
+      {generateDisplay()}
+      <form onSubmit={(e) => {
+        if (value.trim() && !disabled) {
+          onSubmit(e);
+        } else {
+          e.preventDefault();
+        }
+      }} className="responsive-input-form">
+        <div className="responsive-input-wrapper">
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={onChange}
+            placeholder={isFirstHintRevealed ? `${wordLength} letters...` : "Wait for the first hint..."}
+            className="responsive-game-input"
+            disabled={disabled}
+            autoFocus
+            maxLength={wordLength > 0 ? wordLength : 30}
+          />
+          <button 
+            type="submit" 
+            className="submit-button"
+            disabled={!value.trim() || disabled}
+          >
+            Guess
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 function App() {
   const [definition, setDefinition] = useState<string>('');
@@ -94,6 +174,9 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [debug, setDebug] = useState<boolean>(false);
+
+  // Define a constant for max guesses
+  const MAX_GUESSES = 8;
 
   useEffect(() => {
     let interval: number | undefined;
@@ -262,143 +345,93 @@ function App() {
     return attemptFetch();
   };
 
-  const handleGuess = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isGameOver || isCorrect || !guess.trim() || loading) {
-      return;
-    }
-    
-    try {
-      console.log('Submitting guess:', guess);
+  // Update the useEffect that checks game ending conditions
+  useEffect(() => {
+    // End game if the last guess was correct or if all guesses are used
+    if (guessResults.some(result => result === 'correct') || 
+        (hintsToReveal >= MAX_GUESSES - 1)) {
+      setIsGameOver(true);
       
-      // Only proceed if we have a gameId
-      if (!gameId) {
-        setMessage('No active game. Please refresh to start a new game.');
-        return;
-      }
-      
-      console.log('Game ID being sent:', gameId);
-      
-      const newRemainingGuesses = remainingGuesses - 1;
-      const currentGuessIndex = 7 - remainingGuesses;
-      
-      // Create a new guessResults array - DO NOT directly update before API response
-      const newGuessResults = [...guessResults];
-      
-      // Add guess to history
-      const newHistory = [...guessHistory];
-      newHistory.push({
-        word: guess,
-        isCorrect: false,
-        isFuzzy: false
-      });
-      setGuessHistory(newHistory);
-      
-      // Create payload with essential data
-      const payload = {
-        gameId,
-        guess,
-        remainingGuesses,
-        timer,
-        userId,
-        fuzzyCount: fuzzyMatchPositions.length,
-        userName,
-        hintCount: hintsToReveal
-      };
-      
-      console.log('Sending payload to /api/guess:', payload);
-      
-      // Clear the input field immediately for better UX
-      const submittedGuess = guess.trim();
-      setGuess('');
-      
-      const response = await fetch(getApiUrl('/api/guess'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      console.log('Response status from /api/guess:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error response from /api/guess:', errorData);
-        throw new Error(`API error: ${response.status} ${errorData.error || ''}`);
-      }
-      
-      const data = await response.json();
-      
-      console.log('Guess result:', data);
-      
-      // Update state based on the response
-      setRemainingGuesses(newRemainingGuesses);
-      
-      // Update hints to reveal counter based on response
-      if (data.hintsToReveal !== undefined) {
-        setHintsToReveal(data.hintsToReveal);
-      }
-      
-      if (data.isFuzzy && data.fuzzyPositions && data.fuzzyPositions.length) {
-        setFuzzyMatchPositions(data.fuzzyPositions);
-      }
-      
-      if (data.isCorrect) {
-        // Mark all DEFINE boxes as correct when the guess is correct
-        for (let i = 0; i <= 7; i++) {
-          newGuessResults[i] = 'correct';
-        }
-        
-        // Update the latest guess in history to be marked as correct
-        if (newHistory.length > 0) {
-          const lastIndex = newHistory.length - 1;
-          newHistory[lastIndex].isCorrect = true;
-        }
-        setGuessHistory(newHistory);
-        
-        setMessage('Correct! Well done! 🎉');
+      // If the game ended with a correct guess, show confetti and leaderboard
+      if (guessResults.some(result => result === 'correct')) {
         setIsCorrect(true);
-        setIsGameOver(true);
         setShowConfetti(true);
-        setCorrectWord(data.correctWord);
-        
-        // Ensure fuzzy match positions are always cleared for correct guesses
-        setFuzzyMatchPositions([]);
-        
-        // Store leaderboard rank if provided
-        if (data.leaderboardRank) {
-          setLeaderboardRank(data.leaderboardRank);
-        }
         
         // Show leaderboard after a short delay
         setTimeout(() => {
           setShowLeaderboard(true);
         }, 2000);
+      }
+    }
+  }, [guessResults, hintsToReveal]);
+
+  // Modify the handleGuess function to ensure game ends after MAX_GUESSES
+  const handleGuess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isGameOver || !guess.trim()) return;
+
+    try {
+      // Log submission for debugging
+      console.log(`Submitting guess: ${guess}`);
+      
+      // Make API call to submit guess
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/guess`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gameId,
+          guess,
+          remainingGuesses: MAX_GUESSES - hintsToReveal - 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Guess result:', data);
+
+      // Create a copy of the current guessResults array
+      const newGuessResults = [...guessResults];
+
+      // Update game state based on response
+      if (data.isCorrect) {
+        // When the guess is correct, mark all boxes as correct
+        for (let i = 0; i < 8; i++) {
+          newGuessResults[i] = 'correct';
+        }
+        setGuessResults(newGuessResults);
+        setIsCorrect(true);
+        setIsGameOver(true);
         
-        // Hide confetti after 5 seconds
+        // Show confetti and leaderboard on correct guess
+        setShowConfetti(true);
         setTimeout(() => {
-          setShowConfetti(false);
-        }, 5000);
+          setShowLeaderboard(true);
+        }, 1500);
       } else {
-        // Only mark the current guess index as incorrect for wrong guesses
-        newGuessResults[currentGuessIndex] = 'incorrect';
+        // For incorrect guesses, mark the current hint position as incorrect
+        // Simplified: treat fuzzy matches as incorrect for now
+        const currentPosition = hintsToReveal; 
+        newGuessResults[currentPosition] = 'incorrect'; // Always incorrect, ignoring fuzzy
+        setGuessResults(newGuessResults);
+        setHintsToReveal(data.hintsToReveal);
         
-        if (newRemainingGuesses <= 0) {
-          setMessage(`Game Over! The word was: ${data.correctWord}`);
+        // End game if this was the last guess
+        if (data.hintsToReveal >= MAX_GUESSES - 1) {
           setIsGameOver(true);
-          setCorrectWord(data.correctWord);
-        } else {
-          setMessage(`Not quite right. ${newRemainingGuesses} guesses remaining!`);
         }
       }
-      
-      // Set the updated guessResults AFTER API response processing
-      setGuessResults(newGuessResults);
+
+      // Reset input field
+      setGuess('');
+
     } catch (error) {
       console.error('Error submitting guess:', error);
-      setMessage('Error processing your guess. Please try again.');
     }
   };
 
@@ -406,14 +439,15 @@ function App() {
   const DefineBoxes = () => {
     const defineLetters = ['U', 'N', 'D', 'E', 'F', 'I', 'N', 'E'];
     
-    // Simple grid style for the title
+    // Horizontal left-aligned style
     const horizontalStyle = {
       display: 'flex',
       flexDirection: 'row' as const,
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
       alignItems: 'center',
       gap: '0.4rem',
-      width: '100%'
+      width: '100%',
+      marginBottom: '2rem'
     };
     
     return (
@@ -451,13 +485,21 @@ function App() {
 
   // Component to display the correct word when game is over
   const GameOverMessage = () => {
-    if (!isGameOver || isCorrect) return null;
+    if (!isGameOver) return null;
     
-    return (
-      <div className="game-over-message">
-        <p><em className="game-over-label">The word of the day was: </em> <span className="correct-word">{correctWord}</span></p>
-      </div>
-    );
+    if (isCorrect) {
+      return (
+        <div className="game-over-message success-message">
+          <p>Congratulations! You correctly guessed: <span className="correct-word">{correctWord}</span></p>
+        </div>
+      );
+    } else {
+      return (
+        <div className="game-over-message">
+          <p><em className="game-over-label">The word of the day was: </em> <span className="correct-word">{correctWord}</span></p>
+        </div>
+      );
+    }
   };
 
   const handleNextWord = () => {
@@ -489,6 +531,13 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [debug]);
+
+  // Add this function to handle closing the leaderboard
+  const handleLeaderboardClose = () => {
+    setShowLeaderboard(false);
+    // Optionally fetch a new word after closing the leaderboard
+    // fetchNewWord();
+  };
 
   return (
     <div className="app-container">
@@ -537,80 +586,59 @@ function App() {
         </div>
       )}
       
-      <div className="timer-container">
-        <div className="timer">{formatTime(timer)}</div>
-      </div>
-      <div className="title-container">
-        <DefineBoxes />
-      </div>
-      <div className="definition-box">
-        <p>{definition}</p>
-        {isGameOver && !isCorrect && <GameOverMessage />}
-      </div>
-      <div className="game-container">
-        <form onSubmit={handleGuess} className="guess-form">
-          {/* Only show LetterGuessDisplay after the first N hint is revealed */}
-          {wordData && hintsToReveal >= 1 && (
-            <LetterGuessDisplay
-              wordLength={wordData.letterCount || wordData.word?.length || 0}
-              currentGuess={guess}
-              word={wordData.word} 
-            />
-          )}
-          
-          <input
-            type="text"
-            value={guess}
-            onChange={(e) => setGuess(e.target.value)}
-            placeholder="Enter your guess..."
-            disabled={isGameOver}
-            autoComplete="off"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck="false"
-          />
-          
-          {/* Display floating guesses here, between input and submit button */}
-          {guessHistory.length > 0 && (
-            <div className="floating-guesses">
-              {guessHistory.map((guess, index) => (
-                <span 
-                  key={index} 
-                  className={`floating-guess ${guess.isCorrect ? 'correct' : (guess.isFuzzy ? 'fuzzy' : 'incorrect')}`}
-                >
-                  {guess.word}
-                  {guess.isCorrect && <span className="guess-emoji">✓</span>}
-                </span>
-              ))}
-            </div>
-          )}
-          
-          {/* Display remaining guesses counter */}
-          <div className="remaining-guesses">
-            {!isGameOver && (
-              <span>Guesses remaining: <strong>{remainingGuesses}</strong></span>
-            )}
-            {isGameOver && !isCorrect && (
-              <span className="game-over-message">Game Over!</span>
-            )}
-            {isGameOver && isCorrect && (
-              <span className="success-message">Correct! Well done!</span>
-            )}
+      <div className="game-container simplified-ui">
+        {/* Display UNDEFINE boxes at the top */}
+        <div className="define-boxes-container">
+          <div className="define-boxes">
+            {['U', 'N', 'D', 'E', 'F', 'I', 'N', 'E'].map((letter, index) => {
+              let boxClass = 'define-box';
+              
+              // Add active class if this box should be highlighted
+              if (guessResults[index] === 'correct') {
+                boxClass += ' correct';
+              } else if (guessResults[index] === 'incorrect' || guessResults[index] === 'fuzzy') {
+                // Treat fuzzy as incorrect for now to simplify UI
+                boxClass += ' incorrect';
+              } else if (index === 0 || index <= hintsToReveal) {
+                boxClass += ' active';
+              }
+              
+              return (
+                <div key={index} className={boxClass}>
+                  {letter}
+                </div>
+              );
+            })}
           </div>
-          
-          <button type="submit" disabled={isGameOver || !guess.trim()}>
-            Submit Guess
-          </button>
-        </form>
+        </div>
+      
+        <div className="timer-container">
+          <div className="timer">{formatTime(timer)}</div>
+        </div>
 
-        {/* Replace the old hints container with the new IntegratedHints component */}
+        {/* IntegratedHints component with definition passed as prop */}
         {wordData && wordData.hints && (
           <IntegratedHints
+            hints={wordData.hints}
+            revealedHints={isGameOver ? 8 : hintsToReveal}
+            gameOver={isGameOver}
             guessResults={guessResults}
-            hintsToReveal={hintsToReveal}
-            hintsData={wordData.hints}
-            isGameOver={isGameOver}
+            definition={definition}
           />
+        )}
+
+        {/* Add input field for user guesses */}
+        {!isGameOver && (
+          <div className="guess-input-container">
+            <ResponsiveWordInput
+              isFirstHintRevealed={hintsToReveal >= 1}
+              wordLength={wordData?.letterCount || wordData?.word?.length || 0}
+              value={guess}
+              onChange={(e) => setGuess(e.target.value)}
+              onSubmit={handleGuess}
+              disabled={isGameOver}
+            />
+          </div>
         )}
 
         {isGameOver && (
@@ -618,6 +646,9 @@ function App() {
             Next Word
           </button>
         )}
+        
+        {/* Game over message */}
+        <GameOverMessage />
       </div>
 
       {/* Leaderboard component */}
@@ -632,7 +663,7 @@ function App() {
           guessResults={guessResults as any}
           fuzzyMatchPositions={fuzzyMatchPositions}
           hints={{} as Hint}
-          onClose={() => setShowLeaderboard(false)}
+          onClose={handleLeaderboardClose}
           userEmail={userName}
         />
       )}
